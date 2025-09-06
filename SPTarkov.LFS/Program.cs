@@ -1,6 +1,8 @@
 using System;
 using System.Text.Json;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SPTarkov.DI;
 using SPTarkov.LFS.Models;
 using SPTarkov.LFS.Models.LFS;
@@ -16,6 +18,21 @@ public class Program
 
         var builder = WebApplication.CreateBuilder(args);
 
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.AddFixedWindowLimiter(
+                "default",
+                limiterOptions =>
+                {
+                    limiterOptions.PermitLimit = 10000;
+                    limiterOptions.Window = TimeSpan.FromHours(24);
+                    limiterOptions.QueueLimit = 100;
+                    limiterOptions.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+                }
+            );
+            options.RejectionStatusCode = 429;
+        });
+
         builder.WebHost.ConfigureKestrel(serverOptions =>
         {
             serverOptions.Limits.MaxRequestBodySize = null;
@@ -28,6 +45,11 @@ public class Program
         diHandler.InjectAll();
 
         var app = builder.Build();
+        // Handle edge cases where reverse proxies might pass X-Forwarded-For, use this as the actual IP address
+        app.UseForwardedHeaders(
+            new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto }
+        );
+        app.UseRateLimiter();
 
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
@@ -66,20 +88,24 @@ public class Program
     private static void RegisterLfsEndpoints(RouteGroupBuilder group, Config config)
     {
         // LFS Batch API
-        group.MapPost(
-            "/objects/batch",
-            async ([FromServices] LfsService lfsService, [FromBody] LFSBatchRequest request, HttpContext context) =>
-                await lfsService.HandleBatchRequest(request, config, context)
-        );
+        group
+            .MapPost(
+                "/objects/batch",
+                async ([FromServices] LfsService lfsService, [FromBody] LFSBatchRequest request, HttpContext context) =>
+                    await lfsService.HandleBatchRequest(request, config, context)
+            )
+            .RequireRateLimiting("default");
 
         // Download object
-        group.MapGet(
-            "/objects/{objectId}",
-            async ([FromServices] LfsService lfsService, string objectId, HttpContext context) =>
-                await lfsService.HandleDownload(objectId, config, context)
-        );
+        group
+            .MapGet(
+                "/objects/{objectId}",
+                async ([FromServices] LfsService lfsService, string objectId, HttpContext context) =>
+                    await lfsService.HandleDownload(objectId, config, context)
+            )
+            .RequireRateLimiting("default");
 
-        // Upload object
+        // Upload object (Not rate limited)
         group.MapPut(
             "/objects/{objectId}",
             async ([FromServices] LfsService lfsService, string objectId, HttpRequest request, HttpContext context) =>
