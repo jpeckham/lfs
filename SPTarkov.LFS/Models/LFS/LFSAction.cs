@@ -5,7 +5,7 @@ namespace SPTarkov.LFS.Models.LFS;
 public record LFSAction
 {
     [JsonPropertyName("href")]
-    public string Href { get; set; } = "";
+    public string Href { get; set; } = string.Empty;
 
     [JsonPropertyName("header")]
     public Dictionary<string, string>? Header { get; set; }

@@ -5,7 +5,7 @@ namespace SPTarkov.LFS.Models.LFS;
 public record LFSObjectResponse
 {
     [JsonPropertyName("oid")]
-    public string ObjectId { get; set; } = "";
+    public string ObjectId { get; set; } = string.Empty;
 
     [JsonPropertyName("size")]
     public long Size { get; set; }

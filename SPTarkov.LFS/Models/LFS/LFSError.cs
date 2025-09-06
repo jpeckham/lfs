@@ -8,5 +8,5 @@ public record LFSError
     public int Code { get; set; }
 
     [JsonPropertyName("message")]
-    public string Message { get; set; } = "";
+    public string Message { get; set; } = string.Empty;
 }
