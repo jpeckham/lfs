@@ -20,6 +20,9 @@ public record Config
     [JsonPropertyName("Authentication")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public required EAuthentication Authentication { get; init; }
+
+    [JsonIgnore]
+    public GithubSettings? GithubSettings { get; set; }
 }
 
 public enum EAuthentication

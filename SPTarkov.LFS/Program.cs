@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using SPTarkov.DI;
@@ -36,14 +37,27 @@ public class Program
             return;
         }
 
-        List<string> registeredRoutes = [];
-
-        foreach (var config in configs)
+        foreach (var repositoryConfig in configs)
         {
-            var mapGroup = app.MapGroup(config.Endpoint);
-            RegisterLfsEndpoints(mapGroup, config);
-            registeredRoutes.Add(config.Endpoint);
-            logger.LogInformation("Added endpoint: {Endpoint}", config.Endpoint);
+            if (repositoryConfig.Authentication is EAuthentication.Github)
+            {
+                var repoSettings = GetGithubSettingsFromString(repositoryConfig.Url);
+
+                if (repoSettings is null)
+                {
+                    logger.LogError(
+                        "Skipping endpoint '{Endpoint}' due to invalid GitHub repository URL: {RepositoryUrl}",
+                        repositoryConfig.Endpoint,
+                        repositoryConfig.Url
+                    );
+                }
+
+                repositoryConfig.GithubSettings = repoSettings;
+            }
+
+            var mapGroup = app.MapGroup(repositoryConfig.Endpoint);
+            RegisterLfsEndpoints(mapGroup, repositoryConfig);
+            logger.LogInformation("Added endpoint: {Endpoint}", repositoryConfig.Endpoint);
         }
 
         await app.RunAsync();
@@ -62,14 +76,36 @@ public class Program
         group.MapGet(
             "/objects/{objectId}",
             async ([FromServices] LfsService lfsService, string objectId, HttpContext context) =>
-                await lfsService.HandleDownloadAsync(objectId, config, context)
+                await lfsService.HandleDownload(objectId, config, context)
         );
 
         // Upload object
         group.MapPut(
             "/objects/{objectId}",
             async ([FromServices] LfsService lfsService, string objectId, HttpRequest request, HttpContext context) =>
-                await lfsService.HandleUploadAsync(objectId, request, config, context)
+                await lfsService.HandleUpload(objectId, request, config, context)
         );
+    }
+
+    private static GithubSettings? GetGithubSettingsFromString(string Url)
+    {
+        var uri = new Uri(Url);
+
+        if (!string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var segments = uri.AbsolutePath.Trim('/').Split('/');
+
+        if (segments.Length < 2)
+        {
+            return null;
+        }
+
+        var organisation = segments[0];
+        var repository = segments[1];
+
+        return new GithubSettings { Organisation = organisation, Repository = repository };
     }
 }

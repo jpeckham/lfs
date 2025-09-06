@@ -32,15 +32,7 @@ public class GithubAuthenticator(ILogger<GithubAuthenticator> logger) : IAuthent
                 Credentials = new Credentials(username, password),
             };
 
-            // Todo: Handle better, should be verified at program start and if not possible to verify the config should be skipped.
-            // Cache in the config model
-            var uri = new Uri(config.Url);
-            var segments = uri.AbsolutePath.Trim('/').Split('/');
-
-            var organisation = segments.Length > 0 ? segments[0] : null;
-            var repo = segments.Length > 1 ? segments[1] : null;
-
-            var repository = await githubClient.Repository.Get(organisation, repo);
+            var repository = await githubClient.Repository.Get(config.GithubSettings!.Organisation, config.GithubSettings!.Repository);
 
             return operation switch
             {
