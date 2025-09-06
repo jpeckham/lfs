@@ -87,7 +87,7 @@ public class LfsService(ILogger<LfsService> logger, AuthenticatorService authent
         return Results.Ok(response);
     }
 
-    public async Task<IResult> HandleDownloadAsync(string objectId, Config config, HttpContext context)
+    public async Task<IResult> HandleDownload(string objectId, Config config, HttpContext context)
     {
         try
         {
@@ -113,7 +113,7 @@ public class LfsService(ILogger<LfsService> logger, AuthenticatorService authent
         }
     }
 
-    public async Task<IResult> HandleUploadAsync(string objectId, HttpRequest request, Config config, HttpContext context)
+    public async Task<IResult> HandleUpload(string objectId, HttpRequest request, Config config, HttpContext context)
     {
         try
         {
