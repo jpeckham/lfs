@@ -1,6 +1,6 @@
 services:
   sptlfs:
-    image: ghcr.io/sp-tarkov/lfs:main
+    image: ghcr.io/sp-tarkov/lfs:master
     container_name: sptlfs
     restart: unless-stopped
     ports:
