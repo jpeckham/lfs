@@ -4,7 +4,7 @@ services:
     container_name: sptlfs
     restart: unless-stopped
     ports:
-      - "5000:80"
+      - "5420:5420"
     volumes:
       - ./config.jsonc:/app/config.jsonc:ro
       - ./lfs-data:/app/data

@@ -25,5 +25,8 @@ COPY --from=build /app/publish .
 # Create directory for LFS storage
 RUN mkdir -p /app/data
 
+# Expose port 5420
+EXPOSE 5420
+
 # Start the application
 ENTRYPOINT ["dotnet", "SPTarkov.LFS.dll"]

@@ -17,6 +17,7 @@ public class Program
         var configs = JsonSerializer.Deserialize<IReadOnlyList<Config>>(await File.ReadAllTextAsync("config.jsonc")) ?? [];
 
         var builder = WebApplication.CreateBuilder(args);
+        builder.WebHost.UseUrls("http://*:5420");
 
         builder.Services.AddRateLimiter(options =>
         {
