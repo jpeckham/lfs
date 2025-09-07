@@ -75,7 +75,7 @@ public class LfsService(ILogger<LfsService> logger, AuthenticatorService authent
                             ExpiresIn = 3600,
                         },
                     };
-                    objectResponse.Authenticated = true;
+                    objectResponse.Authenticated = false;
                 }
             }
 
