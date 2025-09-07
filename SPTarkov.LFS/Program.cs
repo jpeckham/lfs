@@ -1,4 +1,3 @@
-using System;
 using System.Text.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
@@ -46,10 +45,15 @@ public class Program
         diHandler.InjectAll();
 
         var app = builder.Build();
-        // Handle edge cases where reverse proxies might pass X-Forwarded-For, use this as the actual IP address
-        app.UseForwardedHeaders(
-            new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto }
-        );
+
+        var forwardedHeadersOptions = new ForwardedHeadersOptions
+        {
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+            ForwardLimit = null
+        };
+        forwardedHeadersOptions.KnownNetworks.Clear();
+        forwardedHeadersOptions.KnownProxies.Clear();
+        app.UseForwardedHeaders(forwardedHeadersOptions);
         app.UseRateLimiter();
 
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
