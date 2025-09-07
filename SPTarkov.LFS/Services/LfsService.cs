@@ -75,6 +75,8 @@ public class LfsService(ILogger<LfsService> logger, AuthenticatorService authent
                             ExpiresIn = 3600,
                         },
                     };
+
+                    //Todo: Use this to authenticate based off of object id's, we can skip spamming API requests to GitHub or something then
                     objectResponse.Authenticated = false;
                 }
             }
