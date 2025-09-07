@@ -1,0 +1,10 @@
+services:
+  sptlfs:
+    image: ghcr.io/sp-tarkov/lfs:main
+    container_name: sptlfs
+    restart: unless-stopped
+    ports:
+      - "5000:80"
+    volumes:
+      - ./config.jsonc:/app/config.jsonc:ro
+      - ./lfs-data:/app/data
