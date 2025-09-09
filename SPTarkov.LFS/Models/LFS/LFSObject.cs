@@ -2,11 +2,11 @@
 
 namespace SPTarkov.LFS.Models.LFS;
 
-public class LFSObject
+public record LFSObject
 {
     [JsonPropertyName("oid")]
-    public string ObjectId { get; set; } = string.Empty;
+    public required string ObjectId { get; init; }
 
     [JsonPropertyName("size")]
-    public long Size { get; set; }
+    public required long Size { get; init; }
 }

@@ -14,13 +14,13 @@ public class LocalStorageAdapter
         Directory.CreateDirectory(BaseStoragePath);
     }
 
-    public Task<bool> ExistsAsync(string endpoint, string objectId)
+    public bool ObjectExists(string endpoint, string objectId)
     {
         var filePath = GetFilePath(endpoint, objectId);
-        return Task.FromResult(File.Exists(filePath));
+        return File.Exists(filePath);
     }
 
-    public Task<Stream> GetObjectAsync(string endpoint, string objectId)
+    public FileStream GetObject(string endpoint, string objectId)
     {
         var filePath = GetFilePath(endpoint, objectId);
 
@@ -29,23 +29,29 @@ public class LocalStorageAdapter
             throw new FileNotFoundException($"LFS object {objectId} not found");
         }
 
-        return Task.FromResult<Stream>(File.OpenRead(filePath));
+        return new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 16384, useAsync: true);
     }
 
-    public async Task StoreObjectAsync(string endpoint, string objectId, Stream content)
+    public async Task StoreObject(string endpoint, string objectId, Stream content)
     {
         var filePath = GetFilePath(endpoint, objectId);
         var directory = Path.GetDirectoryName(filePath)!;
         Directory.CreateDirectory(directory);
 
         using var sha256 = SHA256.Create();
-        using var fileStream = File.Create(filePath);
-        using var cryptoStream = new CryptoStream(fileStream, sha256, CryptoStreamMode.Write);
+        await using var fileStream = File.Create(filePath);
+        await using var cryptoStream = new CryptoStream(fileStream, sha256, CryptoStreamMode.Write);
 
         await content.CopyToAsync(cryptoStream);
         await cryptoStream.FlushFinalBlockAsync();
 
-        var hashString = Convert.ToHexStringLower(sha256.Hash!);
+        if (sha256.Hash is null)
+        {
+            File.Delete(filePath);
+            throw new InvalidOperationException("SHA-256 hash is null!");
+        }
+
+        var hashString = Convert.ToHexStringLower(sha256.Hash);
 
         if (!hashString.Equals(objectId, StringComparison.InvariantCultureIgnoreCase))
         {

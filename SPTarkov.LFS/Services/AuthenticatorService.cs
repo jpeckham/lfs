@@ -1,13 +1,14 @@
 ﻿using SPTarkov.DI.Annotations;
 using SPTarkov.LFS.Authenticators;
 using SPTarkov.LFS.Models;
+using SPTarkov.LFS.Models.LFS;
 
 namespace SPTarkov.LFS.Services;
 
 [Injectable]
 public class AuthenticatorService(IEnumerable<IAuthenticator> authenticators)
 {
-    public async Task<bool> Authenticate(Config config, HttpContext context, string operation)
+    public async Task<bool> Authenticate(Config config, HttpContext context, LFSOperation operation)
     {
         var authenticator =
             authenticators.FirstOrDefault(a => a.AuthenticationType == config.Authentication)

@@ -2,13 +2,14 @@
 using SPTarkov.DI.Annotations;
 using SPTarkov.LFS.Extensions;
 using SPTarkov.LFS.Models;
+using SPTarkov.LFS.Models.LFS;
 
 namespace SPTarkov.LFS.Authenticators;
 
 [Injectable]
 public class GithubAuthenticator(ILogger<GithubAuthenticator> logger) : IAuthenticator
 {
-    private static readonly ProductHeaderValue _headerValue = new("SPTarkov.LFS", "1.0.0");
+    private static readonly ProductHeaderValue _headerValue = new("SPTarkov.LFS", Program.AppVersion);
     private static readonly Uri _githubUri = new("https://api.github.com/");
 
     public EAuthentication AuthenticationType
@@ -16,9 +17,9 @@ public class GithubAuthenticator(ILogger<GithubAuthenticator> logger) : IAuthent
         get { return EAuthentication.Github; }
     }
 
-    public async Task<bool> AuthenticateAsync(Config config, HttpContext context, string operation)
+    public async Task<bool> AuthenticateAsync(Config config, HttpContext context, LFSOperation operation)
     {
-        if (config.Visibility is EVisibility.Public && operation is "download")
+        if (config.Visibility is EVisibility.Public && operation is LFSOperation.Download)
         {
             return true;
         }
@@ -36,8 +37,8 @@ public class GithubAuthenticator(ILogger<GithubAuthenticator> logger) : IAuthent
 
             return operation switch
             {
-                "download" => repository.Permissions.Pull,
-                "upload" => repository.Permissions.Push,
+                LFSOperation.Download => repository.Permissions.Pull,
+                LFSOperation.Upload => repository.Permissions.Push,
                 _ => false,
             };
         }

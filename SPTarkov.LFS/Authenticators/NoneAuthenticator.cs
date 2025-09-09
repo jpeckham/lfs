@@ -1,5 +1,6 @@
 ﻿using SPTarkov.DI.Annotations;
 using SPTarkov.LFS.Models;
+using SPTarkov.LFS.Models.LFS;
 
 namespace SPTarkov.LFS.Authenticators;
 
@@ -11,7 +12,7 @@ public class NoneAuthenticator : IAuthenticator
         get { return EAuthentication.None; }
     }
 
-    public Task<bool> AuthenticateAsync(Config config, HttpContext context, string operation)
+    public Task<bool> AuthenticateAsync(Config config, HttpContext context, LFSOperation operation)
     {
         return Task.FromResult(true);
     }

@@ -8,5 +8,5 @@ public record LFSBatchResponse
     public string Transfer { get; set; } = "basic";
 
     [JsonPropertyName("objects")]
-    public LFSObjectResponse[] Objects { get; set; } = [];
+    public List<LFSObjectResponse> Objects { get; set; } = [];
 }

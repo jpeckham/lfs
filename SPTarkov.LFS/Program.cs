@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,15 @@ namespace SPTarkov.LFS;
 
 public class Program
 {
+    public static string AppVersion
+    {
+        get
+        {
+            return Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+                ?? throw new NullReferenceException("Could not get AppVersion!");
+        }
+    }
+
     public static async Task Main(string[] args)
     {
         var configs = JsonSerializer.Deserialize<IReadOnlyList<Config>>(await File.ReadAllTextAsync("config.jsonc")) ?? [];
@@ -49,7 +59,7 @@ public class Program
         var forwardedHeadersOptions = new ForwardedHeadersOptions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-            ForwardLimit = null
+            ForwardLimit = null,
         };
         forwardedHeadersOptions.KnownNetworks.Clear();
         forwardedHeadersOptions.KnownProxies.Clear();
@@ -86,6 +96,8 @@ public class Program
             RegisterLfsEndpoints(mapGroup, repositoryConfig);
             logger.LogInformation("Added endpoint: {Endpoint}", repositoryConfig.Endpoint);
         }
+
+        app.MapGet("/", () => Results.Content($"<h1>SPT.LFS v{AppVersion}</h1>", "text/html")).RequireRateLimiting("default");
 
         await app.RunAsync();
     }

@@ -5,7 +5,8 @@ namespace SPTarkov.LFS.Models.LFS;
 public record LFSBatchRequest
 {
     [JsonPropertyName("operation")]
-    public string Operation { get; set; } = string.Empty;
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public LFSOperation Operation { get; set; }
 
     [JsonPropertyName("transfers")]
     public string[] Transfers { get; set; } = ["basic"];

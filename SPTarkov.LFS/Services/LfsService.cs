@@ -1,4 +1,5 @@
 ﻿using SPTarkov.DI.Annotations;
+using SPTarkov.LFS.Helpers;
 using SPTarkov.LFS.Models;
 using SPTarkov.LFS.Models.LFS;
 using SPTarkov.LFS.StorageAdapters;
@@ -6,7 +7,12 @@ using SPTarkov.LFS.StorageAdapters;
 namespace SPTarkov.LFS.Services;
 
 [Injectable]
-public class LfsService(ILogger<LfsService> logger, AuthenticatorService authenticatorService, LocalStorageAdapter localStorageAdapter)
+public class LfsService(
+    ILogger<LfsService> logger,
+    AuthenticatorService authenticatorService,
+    BatchRequestHelper batchRequestHelper,
+    LocalStorageAdapter localStorageAdapter
+)
 {
     public async Task<IResult> HandleBatchRequest(LFSBatchRequest request, Config config, HttpContext context)
     {
@@ -24,67 +30,22 @@ public class LfsService(ILogger<LfsService> logger, AuthenticatorService authent
             config.Endpoint
         );
 
-        var objectResponses = new List<LFSObjectResponse>();
+        List<LFSObjectResponse> objectResponses = [];
 
         foreach (var lfsObject in request.Objects)
         {
-            var objectResponse = new LFSObjectResponse { ObjectId = lfsObject.ObjectId, Size = lfsObject.Size };
-
-            var objectExists = await localStorageAdapter.ExistsAsync(config.Endpoint, lfsObject.ObjectId);
-
-            if (request.Operation == "download")
+            switch (request.Operation)
             {
-                if (objectExists)
-                {
-                    var actualSize = localStorageAdapter.GetObjectSize(config.Endpoint, lfsObject.ObjectId);
-
-                    if (actualSize != lfsObject.Size)
-                    {
-                        objectResponse.Error = new LFSError
-                        {
-                            Code = 422,
-                            Message = $"Object size mismatch. Expected {lfsObject.Size}, found {actualSize}",
-                        };
-                    }
-                    else
-                    {
-                        objectResponse.Actions = new Dictionary<string, LFSAction>
-                        {
-                            ["download"] = new LFSAction
-                            {
-                                Href = $"{context.Request.Scheme}://{context.Request.Host}{config.Endpoint}/objects/{lfsObject.ObjectId}",
-                                ExpiresIn = 3600,
-                            },
-                        };
-                    }
-                }
-                else
-                {
-                    objectResponse.Error = new LFSError { Code = 404, Message = "Object not found" };
-                }
+                case LFSOperation.Download:
+                    objectResponses.Add(batchRequestHelper.HandleBatchRequestDownload(config, context, lfsObject));
+                    break;
+                case LFSOperation.Upload:
+                    objectResponses.Add(batchRequestHelper.HandleBatchRequestUpload(config, context, lfsObject));
+                    break;
             }
-            else if (request.Operation == "upload")
-            {
-                if (!objectExists)
-                {
-                    objectResponse.Actions = new Dictionary<string, LFSAction>
-                    {
-                        ["upload"] = new LFSAction
-                        {
-                            Href = $"{context.Request.Scheme}://{context.Request.Host}{config.Endpoint}/objects/{lfsObject.ObjectId}",
-                            ExpiresIn = 3600,
-                        },
-                    };
-
-                    //Todo: Use this to authenticate based off of object id's, we can skip spamming API requests to GitHub or something then
-                    objectResponse.Authenticated = false;
-                }
-            }
-
-            objectResponses.Add(objectResponse);
         }
 
-        var response = new LFSBatchResponse { Objects = objectResponses.ToArray() };
+        var response = new LFSBatchResponse { Objects = objectResponses };
 
         return Results.Ok(response);
     }
@@ -93,25 +54,28 @@ public class LfsService(ILogger<LfsService> logger, AuthenticatorService authent
     {
         try
         {
-            var authenticated = await authenticatorService.Authenticate(config, context, "download");
+            var authenticated = await authenticatorService.Authenticate(config, context, LFSOperation.Download);
 
             if (!authenticated)
             {
                 return Results.Unauthorized();
             }
 
-            if (!await localStorageAdapter.ExistsAsync(config.Endpoint, objectId))
+            if (!localStorageAdapter.ObjectExists(config.Endpoint, objectId))
             {
                 return Results.NotFound();
             }
 
-            var stream = await localStorageAdapter.GetObjectAsync(config.Endpoint, objectId);
-            return Results.Stream(stream, "application/octet-stream", enableRangeProcessing: true);
+            return Results.Stream(
+                localStorageAdapter.GetObject(config.Endpoint, objectId),
+                "application/octet-stream",
+                enableRangeProcessing: true
+            );
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, $"Error downloading object {objectId}");
-            return Results.Problem("Internal server error", statusCode: 500);
+            logger.LogError(ex, "Error downloading object {ObjectId}", objectId);
+            return Results.InternalServerError();
         }
     }
 
@@ -119,14 +83,14 @@ public class LfsService(ILogger<LfsService> logger, AuthenticatorService authent
     {
         try
         {
-            var authenticated = await authenticatorService.Authenticate(config, context, "upload");
+            var authenticated = await authenticatorService.Authenticate(config, context, LFSOperation.Upload);
 
             if (!authenticated)
             {
                 return Results.Unauthorized();
             }
 
-            if (await localStorageAdapter.ExistsAsync(config.Endpoint, objectId))
+            if (localStorageAdapter.ObjectExists(config.Endpoint, objectId))
             {
                 return Results.Ok();
             }
@@ -138,7 +102,7 @@ public class LfsService(ILogger<LfsService> logger, AuthenticatorService authent
                 return Results.BadRequest("Content-Length header is required");
             }
 
-            await localStorageAdapter.StoreObjectAsync(config.Endpoint, objectId, request.Body);
+            await localStorageAdapter.StoreObject(config.Endpoint, objectId, request.Body);
 
             logger.LogInformation("Successfully stored object {ObjectId} ({Size} bytes)", objectId, contentLength.Value);
             return Results.Ok();

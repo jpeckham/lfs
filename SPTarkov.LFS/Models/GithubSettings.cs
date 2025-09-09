@@ -2,6 +2,6 @@
 
 public record GithubSettings
 {
-    public string Organisation { get; init; } = string.Empty;
-    public string Repository { get; init; } = string.Empty;
+    public required string Organisation { get; init; }
+    public required string Repository { get; init; }
 }

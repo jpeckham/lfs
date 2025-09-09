@@ -5,11 +5,11 @@ namespace SPTarkov.LFS.Models.LFS;
 public record LFSAction
 {
     [JsonPropertyName("href")]
-    public string Href { get; set; } = string.Empty;
+    public required string Href { get; init; }
 
     [JsonPropertyName("header")]
-    public Dictionary<string, string>? Header { get; set; }
+    public Dictionary<string, string>? Header { get; init; }
 
     [JsonPropertyName("expires_in")]
-    public int ExpiresIn { get; set; }
+    public required int ExpiresIn { get; init; }
 }
