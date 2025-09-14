@@ -1,8 +1,9 @@
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using SPTarkov.DI;
 using SPTarkov.LFS.Models;
 using SPTarkov.LFS.Models.LFS;
@@ -30,17 +31,28 @@ public class Program
 
         builder.Services.AddRateLimiter(options =>
         {
-            options.AddFixedWindowLimiter(
-                "default",
-                limiterOptions =>
-                {
-                    limiterOptions.PermitLimit = 10000;
-                    limiterOptions.Window = TimeSpan.FromHours(24);
-                    limiterOptions.QueueLimit = 100;
-                    limiterOptions.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
-                }
-            );
+            options.AddPolicy("default", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: ipAddress,
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10000,
+                        Window = TimeSpan.FromHours(24),
+                        QueueLimit = 100,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                    });
+            });
             options.RejectionStatusCode = 429;
+            options.OnRejected = (context, _) =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                var ipAddress = GetClientIpAddress(context.HttpContext);
+                logger.LogWarning("Rate limit exceeded for IP: {IpAddress} on endpoint: {Path}", ipAddress, context.HttpContext.Request.Path);
+                return ValueTask.CompletedTask;
+            };
         });
 
         builder.WebHost.ConfigureKestrel(serverOptions =>
@@ -64,6 +76,24 @@ public class Program
         forwardedHeadersOptions.KnownNetworks.Clear();
         forwardedHeadersOptions.KnownProxies.Clear();
         app.UseForwardedHeaders(forwardedHeadersOptions);
+
+        // Middleware to log IP detection for debugging
+        // To be removed once we confirm IP detection works as expected
+        app.Use(async (context, next) =>
+        {
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            var clientIp = GetClientIpAddress(context);
+            var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString();
+
+            logger.LogInformation(
+                "Request from - Resolved IP: {ClientIp}, X-Forwarded-For: {ForwardedFor}, X-Real-IP: {RealIp}, RemoteIpAddress: {RemoteIp}, Path: {Path}",
+                clientIp, forwardedFor ?? "none", realIp ?? "none", remoteIp ?? "none", context.Request.Path);
+
+            await next();
+        });
+
         app.UseRateLimiter();
 
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -128,6 +158,36 @@ public class Program
             async ([FromServices] LfsService lfsService, string objectId, HttpRequest request, HttpContext context) =>
                 await lfsService.HandleUpload(objectId, request, config, context)
         );
+    }
+
+    private static string GetClientIpAddress(HttpContext context)
+    {
+        // First, try to get IP from X-Forwarded-For header (for when behind proxy)
+        var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwardedFor))
+        {
+            // X-Forwarded-For can contain multiple IPs, and we only want the first one (client IP)
+            var ips = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (ips.Length > 0 && IPAddress.TryParse(ips[0], out _))
+            {
+                return ips[0];
+            }
+        }
+
+        // Try X-Real-IP (Available when behind nginx)
+        var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(realIp) && IPAddress.TryParse(realIp, out _))
+        {
+            return realIp;
+        }
+
+        var remoteIp = context.Connection.RemoteIpAddress;
+        if (remoteIp == null)
+        {
+            return "";
+        }
+
+        return remoteIp.Equals(IPAddress.IPv6Loopback) ? "127.0.0.1" : remoteIp.ToString();
     }
 
     private static GithubSettings? GetGithubSettingsFromString(string Url)
