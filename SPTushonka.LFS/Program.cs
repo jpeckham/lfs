@@ -102,16 +102,20 @@ public class Program
                     var clientIp = context.Connection.RemoteIpAddress;
                     var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
                     var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
-                    var remoteIp = context.Connection.RemoteIpAddress?.ToString();
 
-                    logger.LogInformation(
-                        "Request from - Resolved IP: {ClientIp}, X-Forwarded-For: {ForwardedFor}, X-Real-IP: {RealIp}, RemoteIpAddress: {RemoteIp}, Path: {Path}",
-                        clientIp,
-                        forwardedFor ?? "none",
-                        realIp ?? "none",
-                        remoteIp ?? "none",
-                        context.Request.Path
-                    );
+                    var ipInfo = $"Client: {clientIp}";
+
+                    if (!string.IsNullOrEmpty(forwardedFor))
+                    {
+                        ipInfo += $", X-Forwarded-For: {forwardedFor}";
+                    }
+
+                    if (!string.IsNullOrEmpty(realIp))
+                    {
+                        ipInfo += $", X-Real-IP: {realIp}";
+                    }
+
+                    logger.LogInformation("Request from {IpInfo}, Path: {Path}", ipInfo, context.Request.Path);
 
                     await next(context);
                 }
