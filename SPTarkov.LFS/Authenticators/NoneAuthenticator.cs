@@ -12,7 +12,7 @@ public class NoneAuthenticator : IAuthenticator
         get { return EAuthentication.None; }
     }
 
-    public Task<bool> AuthenticateAsync(Config config, HttpContext context, LFSOperation operation)
+    public Task<bool> AuthenticateAsync(EndpointConfig endpontConfig, HttpContext context, LFSOperation operation)
     {
         return Task.FromResult(true);
     }

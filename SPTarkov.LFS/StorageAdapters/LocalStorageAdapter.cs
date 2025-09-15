@@ -11,7 +11,10 @@ public class LocalStorageAdapter
 
     public LocalStorageAdapter()
     {
-        Directory.CreateDirectory(BaseStoragePath);
+        if (!Directory.Exists(BaseStoragePath))
+        {
+            Directory.CreateDirectory(BaseStoragePath);
+        }
     }
 
     public bool ObjectExists(string endpoint, string objectId)

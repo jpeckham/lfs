@@ -11,24 +11,29 @@ public class LfsService(
     ILogger<LfsService> logger,
     AuthenticatorService authenticatorService,
     BatchRequestHelper batchRequestHelper,
-    LocalStorageAdapter localStorageAdapter
+    LocalStorageAdapter localStorageAdapter,
+    Config config
 )
 {
-    public async Task<IResult> HandleBatchRequest(LFSBatchRequest request, Config config, HttpContext context)
+    public async Task<IResult> HandleBatchRequest(LFSBatchRequest request, EndpointConfig endpointConfig, HttpContext context)
     {
-        var authenticated = await authenticatorService.Authenticate(config, context, request.Operation);
+        var authenticated = await authenticatorService.Authenticate(endpointConfig, context, request.Operation);
 
         if (!authenticated)
         {
             return Results.Unauthorized();
         }
 
-        logger.LogInformation(
-            "LFS batch request: {Operation} with {Count} objects for endpoint {Endpoint}",
-            request.Operation,
-            request.Objects.Length,
-            config.Endpoint
-        );
+        if (config.Options.AdditionalLogging)
+        {
+            logger.LogInformation(
+                "[{EndpointName}] LFS batch request: {Operation} with {Count} objects for endpoint {Endpoint}",
+                endpointConfig.Name,
+                request.Operation,
+                request.Objects.Length,
+                endpointConfig.Endpoint
+            );
+        }
 
         List<LFSObjectResponse> objectResponses = [];
 
@@ -37,10 +42,10 @@ public class LfsService(
             switch (request.Operation)
             {
                 case LFSOperation.Download:
-                    objectResponses.Add(batchRequestHelper.HandleBatchRequestDownload(config, context, lfsObject));
+                    objectResponses.Add(batchRequestHelper.HandleBatchRequestDownload(endpointConfig, context, lfsObject));
                     break;
                 case LFSOperation.Upload:
-                    objectResponses.Add(batchRequestHelper.HandleBatchRequestUpload(config, context, lfsObject));
+                    objectResponses.Add(batchRequestHelper.HandleBatchRequestUpload(endpointConfig, context, lfsObject));
                     break;
             }
         }
@@ -50,24 +55,24 @@ public class LfsService(
         return Results.Ok(response);
     }
 
-    public async Task<IResult> HandleDownload(string objectId, Config config, HttpContext context)
+    public async Task<IResult> HandleDownload(string objectId, EndpointConfig endpointConfig, HttpContext context)
     {
         try
         {
-            var authenticated = await authenticatorService.Authenticate(config, context, LFSOperation.Download);
+            var authenticated = await authenticatorService.Authenticate(endpointConfig, context, LFSOperation.Download);
 
             if (!authenticated)
             {
                 return Results.Unauthorized();
             }
 
-            if (!localStorageAdapter.ObjectExists(config.Endpoint, objectId))
+            if (!localStorageAdapter.ObjectExists(endpointConfig.Endpoint, objectId))
             {
                 return Results.NotFound();
             }
 
             return Results.Stream(
-                localStorageAdapter.GetObject(config.Endpoint, objectId),
+                localStorageAdapter.GetObject(endpointConfig.Endpoint, objectId),
                 "application/octet-stream",
                 enableRangeProcessing: true
             );
@@ -79,18 +84,18 @@ public class LfsService(
         }
     }
 
-    public async Task<IResult> HandleUpload(string objectId, HttpRequest request, Config config, HttpContext context)
+    public async Task<IResult> HandleUpload(string objectId, HttpRequest request, EndpointConfig endPointConfig, HttpContext context)
     {
         try
         {
-            var authenticated = await authenticatorService.Authenticate(config, context, LFSOperation.Upload);
+            var authenticated = await authenticatorService.Authenticate(endPointConfig, context, LFSOperation.Upload);
 
             if (!authenticated)
             {
                 return Results.Unauthorized();
             }
 
-            if (localStorageAdapter.ObjectExists(config.Endpoint, objectId))
+            if (localStorageAdapter.ObjectExists(endPointConfig.Endpoint, objectId))
             {
                 return Results.Ok();
             }
@@ -102,9 +107,18 @@ public class LfsService(
                 return Results.BadRequest("Content-Length header is required");
             }
 
-            await localStorageAdapter.StoreObject(config.Endpoint, objectId, request.Body);
+            await localStorageAdapter.StoreObject(endPointConfig.Endpoint, objectId, request.Body);
 
-            logger.LogInformation("Successfully stored object {ObjectId} ({Size} bytes)", objectId, contentLength.Value);
+            if (config.Options.AdditionalLogging)
+            {
+                logger.LogInformation(
+                    "[{EndpointName}] Successfully stored object {ObjectId} ({Size} bytes)",
+                    endPointConfig.Name,
+                    objectId,
+                    contentLength.Value
+                );
+            }
+
             return Results.Ok();
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("hash mismatch"))

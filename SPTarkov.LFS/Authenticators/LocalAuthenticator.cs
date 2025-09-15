@@ -12,7 +12,7 @@ public class LocalAuthenticator : IAuthenticator
         get { return EAuthentication.Local; }
     }
 
-    public Task<bool> AuthenticateAsync(Config config, HttpContext context, LFSOperation operation)
+    public Task<bool> AuthenticateAsync(EndpointConfig endpointConfig, HttpContext context, LFSOperation operation)
     {
         //Todo: Implement
         throw new NotImplementedException();

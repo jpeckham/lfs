@@ -14,5 +14,5 @@ public interface IAuthenticator
     /// The method to authenticate
     /// </summary>
     /// <returns>Returns <see cref="true"/> if authenticated successfully, returns <see cref="false"/> if not</returns>
-    Task<bool> AuthenticateAsync(Config config, HttpContext context, LFSOperation operation);
+    Task<bool> AuthenticateAsync(EndpointConfig config, HttpContext context, LFSOperation operation);
 }

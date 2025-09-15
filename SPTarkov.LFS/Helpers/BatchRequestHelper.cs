@@ -8,15 +8,15 @@ namespace SPTarkov.LFS.Helpers;
 [Injectable]
 public class BatchRequestHelper(LocalStorageAdapter localStorageAdapter)
 {
-    public LFSObjectResponse HandleBatchRequestDownload(Config config, HttpContext context, LFSObject lfsObject)
+    public LFSObjectResponse HandleBatchRequestDownload(EndpointConfig endpointConfig, HttpContext context, LFSObject lfsObject)
     {
         var objectResponse = new LFSObjectResponse { ObjectId = lfsObject.ObjectId, Size = lfsObject.Size };
 
-        var objectExists = localStorageAdapter.ObjectExists(config.Endpoint, lfsObject.ObjectId);
+        var objectExists = localStorageAdapter.ObjectExists(endpointConfig.Endpoint, lfsObject.ObjectId);
 
         if (objectExists)
         {
-            var actualSize = localStorageAdapter.GetObjectSize(config.Endpoint, lfsObject.ObjectId);
+            var actualSize = localStorageAdapter.GetObjectSize(endpointConfig.Endpoint, lfsObject.ObjectId);
 
             if (actualSize != lfsObject.Size)
             {
@@ -32,7 +32,7 @@ public class BatchRequestHelper(LocalStorageAdapter localStorageAdapter)
                 {
                     ["download"] = new LFSAction
                     {
-                        Href = $"{context.Request.Scheme}://{context.Request.Host}{config.Endpoint}/objects/{lfsObject.ObjectId}",
+                        Href = $"{context.Request.Scheme}://{context.Request.Host}{endpointConfig.Endpoint}/objects/{lfsObject.ObjectId}",
                         ExpiresIn = 3600,
                         //Todo: Set header here for authentication, read it in the authenticationservice again so that we don't have to auth with github everytime
                     },
@@ -47,11 +47,11 @@ public class BatchRequestHelper(LocalStorageAdapter localStorageAdapter)
         return objectResponse;
     }
 
-    public LFSObjectResponse HandleBatchRequestUpload(Config config, HttpContext context, LFSObject lfsObject)
+    public LFSObjectResponse HandleBatchRequestUpload(EndpointConfig endpointConfig, HttpContext context, LFSObject lfsObject)
     {
         var objectResponse = new LFSObjectResponse { ObjectId = lfsObject.ObjectId, Size = lfsObject.Size };
 
-        var objectExists = localStorageAdapter.ObjectExists(config.Endpoint, lfsObject.ObjectId);
+        var objectExists = localStorageAdapter.ObjectExists(endpointConfig.Endpoint, lfsObject.ObjectId);
 
         if (!objectExists)
         {
@@ -59,7 +59,7 @@ public class BatchRequestHelper(LocalStorageAdapter localStorageAdapter)
             {
                 ["upload"] = new LFSAction
                 {
-                    Href = $"{context.Request.Scheme}://{context.Request.Host}{config.Endpoint}/objects/{lfsObject.ObjectId}",
+                    Href = $"{context.Request.Scheme}://{context.Request.Host}{endpointConfig.Endpoint}/objects/{lfsObject.ObjectId}",
                     ExpiresIn = 3600,
                     //Todo: Set header here for authentication, read it in the authenticationservice again so that we don't have to auth with github everytime
                 },

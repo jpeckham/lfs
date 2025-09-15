@@ -1,10 +1,10 @@
-using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using SPTarkov.DI;
+using SPTarkov.LFS.Extensions;
 using SPTarkov.LFS.Models;
 using SPTarkov.LFS.Models.LFS;
 using SPTarkov.LFS.Services;
@@ -24,35 +24,59 @@ public class Program
 
     public static async Task Main(string[] args)
     {
-        var configs = JsonSerializer.Deserialize<IReadOnlyList<Config>>(await File.ReadAllTextAsync("config.jsonc")) ?? [];
+        var config =
+            JsonSerializer.Deserialize<Config>(await File.ReadAllTextAsync("config.jsonc"))
+            ?? throw new NullReferenceException("Could not read the config file!");
 
         var builder = WebApplication.CreateBuilder(args);
+
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            options.ForwardLimit = null;
+
+            options.KnownNetworks.Clear();
+            options.KnownProxies.Clear();
+        });
+
         builder.WebHost.UseUrls("http://*:5420");
 
         builder.Services.AddRateLimiter(options =>
         {
-            options.AddPolicy("default", httpContext =>
-            {
-                var ipAddress = GetClientIpAddress(httpContext);
+            options.AddPolicy(
+                "default",
+                httpContext =>
+                {
+                    var ipAddress = httpContext.GetClientIpAddress();
 
-                return RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: ipAddress,
-                    factory: _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 10000,
-                        Window = TimeSpan.FromHours(24),
-                        QueueLimit = 100,
-                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst
-                    });
-            });
+                    return RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: ipAddress,
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 10000,
+                            Window = TimeSpan.FromHours(24),
+                            QueueLimit = 100,
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        }
+                    );
+                }
+            );
+
             options.RejectionStatusCode = 429;
-            options.OnRejected = (context, _) =>
+
+            if (config.Options.AdditionalLogging)
             {
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                var ipAddress = GetClientIpAddress(context.HttpContext);
-                logger.LogWarning("Rate limit exceeded for IP: {IpAddress} on endpoint: {Path}", ipAddress, context.HttpContext.Request.Path);
-                return ValueTask.CompletedTask;
-            };
+                options.OnRejected = (context, _) =>
+                {
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                    logger.LogWarning(
+                        "Rate limit exceeded for IP: {IpAddress} on endpoint: {Path}",
+                        context.HttpContext.GetClientIpAddress(),
+                        context.HttpContext.Request.Path
+                    );
+                    return ValueTask.CompletedTask;
+                };
+            }
         });
 
         builder.WebHost.ConfigureKestrel(serverOptions =>
@@ -60,51 +84,51 @@ public class Program
             serverOptions.Limits.MaxRequestBodySize = null;
         });
 
-        builder.Services.AddSingleton(configs);
+        builder.Services.AddSingleton(config);
 
         var diHandler = new DependencyInjectionHandler(builder.Services);
         diHandler.AddInjectableTypesFromTypeAssembly(typeof(Program));
         diHandler.InjectAll();
 
         var app = builder.Build();
+        app.UseForwardedHeaders();
 
-        var forwardedHeadersOptions = new ForwardedHeadersOptions
+        if (config.Options.AdditionalLogging)
         {
-            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-            ForwardLimit = null,
-        };
-        forwardedHeadersOptions.KnownNetworks.Clear();
-        forwardedHeadersOptions.KnownProxies.Clear();
-        app.UseForwardedHeaders(forwardedHeadersOptions);
+            app.Use(
+                async (context, next) =>
+                {
+                    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+                    var clientIp = context.GetClientIpAddress();
+                    var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+                    var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
+                    var remoteIp = context.Connection.RemoteIpAddress?.ToString();
 
-        // Middleware to log IP detection for debugging
-        // To be removed once we confirm IP detection works as expected
-        app.Use(async (context, next) =>
-        {
-            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-            var clientIp = GetClientIpAddress(context);
-            var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
-            var remoteIp = context.Connection.RemoteIpAddress?.ToString();
+                    logger.LogInformation(
+                        "Request from - Resolved IP: {ClientIp}, X-Forwarded-For: {ForwardedFor}, X-Real-IP: {RealIp}, RemoteIpAddress: {RemoteIp}, Path: {Path}",
+                        clientIp,
+                        forwardedFor ?? "none",
+                        realIp ?? "none",
+                        remoteIp ?? "none",
+                        context.Request.Path
+                    );
 
-            logger.LogInformation(
-                "Request from - Resolved IP: {ClientIp}, X-Forwarded-For: {ForwardedFor}, X-Real-IP: {RealIp}, RemoteIpAddress: {RemoteIp}, Path: {Path}",
-                clientIp, forwardedFor ?? "none", realIp ?? "none", remoteIp ?? "none", context.Request.Path);
-
-            await next();
-        });
+                    await next(context);
+                }
+            );
+        }
 
         app.UseRateLimiter();
 
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-        if (configs.Count == 0)
+        if (config.Endpoints.Count == 0)
         {
             logger.LogError("No configs were entered!");
             return;
         }
 
-        foreach (var repositoryConfig in configs)
+        foreach (var repositoryConfig in config.Endpoints)
         {
             if (repositoryConfig.Authentication is EAuthentication.Github)
             {
@@ -132,7 +156,7 @@ public class Program
         await app.RunAsync();
     }
 
-    private static void RegisterLfsEndpoints(RouteGroupBuilder group, Config config)
+    private static void RegisterLfsEndpoints(RouteGroupBuilder group, EndpointConfig config)
     {
         // LFS Batch API
         group
@@ -158,36 +182,6 @@ public class Program
             async ([FromServices] LfsService lfsService, string objectId, HttpRequest request, HttpContext context) =>
                 await lfsService.HandleUpload(objectId, request, config, context)
         );
-    }
-
-    private static string GetClientIpAddress(HttpContext context)
-    {
-        // First, try to get IP from X-Forwarded-For header (for when behind proxy)
-        var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwardedFor))
-        {
-            // X-Forwarded-For can contain multiple IPs, and we only want the first one (client IP)
-            var ips = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (ips.Length > 0 && IPAddress.TryParse(ips[0], out _))
-            {
-                return ips[0];
-            }
-        }
-
-        // Try X-Real-IP (Available when behind nginx)
-        var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(realIp) && IPAddress.TryParse(realIp, out _))
-        {
-            return realIp;
-        }
-
-        var remoteIp = context.Connection.RemoteIpAddress;
-        if (remoteIp == null)
-        {
-            return "";
-        }
-
-        return remoteIp.Equals(IPAddress.IPv6Loopback) ? "127.0.0.1" : remoteIp.ToString();
     }
 
     private static GithubSettings? GetGithubSettingsFromString(string Url)

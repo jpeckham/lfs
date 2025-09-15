@@ -17,7 +17,7 @@ public class GithubAuthenticator(ILogger<GithubAuthenticator> logger) : IAuthent
         get { return EAuthentication.Github; }
     }
 
-    public async Task<bool> AuthenticateAsync(Config config, HttpContext context, LFSOperation operation)
+    public async Task<bool> AuthenticateAsync(EndpointConfig config, HttpContext context, LFSOperation operation)
     {
         if (config.Visibility is EVisibility.Public && operation is LFSOperation.Download)
         {

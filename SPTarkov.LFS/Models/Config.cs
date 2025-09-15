@@ -4,6 +4,15 @@ namespace SPTarkov.LFS.Models;
 
 public record Config
 {
+    [JsonPropertyName("Endpoints")]
+    public required List<EndpointConfig> Endpoints { get; set; }
+
+    [JsonPropertyName("Options")]
+    public required LFSApplicationOptions Options { get; set; }
+}
+
+public record EndpointConfig
+{
     [JsonPropertyName("RepositoryName")]
     public required string Name { get; init; }
 
@@ -23,6 +32,11 @@ public record Config
 
     [JsonIgnore]
     public GithubSettings? GithubSettings { get; set; }
+}
+
+public record LFSApplicationOptions
+{
+    public bool AdditionalLogging { get; set; }
 }
 
 public enum EAuthentication

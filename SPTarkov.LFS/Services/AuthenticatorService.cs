@@ -8,12 +8,12 @@ namespace SPTarkov.LFS.Services;
 [Injectable]
 public class AuthenticatorService(IEnumerable<IAuthenticator> authenticators)
 {
-    public async Task<bool> Authenticate(Config config, HttpContext context, LFSOperation operation)
+    public async Task<bool> Authenticate(EndpointConfig endpointConfig, HttpContext context, LFSOperation operation)
     {
         var authenticator =
-            authenticators.FirstOrDefault(a => a.AuthenticationType == config.Authentication)
-            ?? throw new InvalidOperationException($"No authenticator found for type: {config.Authentication}");
+            authenticators.FirstOrDefault(a => a.AuthenticationType == endpointConfig.Authentication)
+            ?? throw new InvalidOperationException($"No authenticator found for type: {endpointConfig.Authentication}");
 
-        return await authenticator.AuthenticateAsync(config, context, operation);
+        return await authenticator.AuthenticateAsync(endpointConfig, context, operation);
     }
 }
