@@ -3,8 +3,8 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /app
 
 # Copy solution and project files
-COPY SPTarkov.LFS.sln ./
-COPY SPTarkov.LFS/SPTarkov.LFS.csproj SPTarkov.LFS/
+COPY SPTushonka.LFS.sln ./
+COPY SPTushonka.LFS/SPTushonka.LFS.csproj SPTushonka.LFS/
 
 # Restore dependencies
 RUN dotnet restore
@@ -13,7 +13,7 @@ RUN dotnet restore
 COPY . .
 
 # Build and publish
-RUN dotnet publish SPTarkov.LFS/SPTarkov.LFS.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish SPTushonka.LFS/SPTushonka.LFS.csproj -c Release -o /app/publish --no-restore
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
@@ -29,4 +29,4 @@ RUN mkdir -p /app/data
 EXPOSE 5420
 
 # Start the application
-ENTRYPOINT ["dotnet", "SPTarkov.LFS.dll"]
+ENTRYPOINT ["dotnet", "SPTushonka.LFS.dll"]

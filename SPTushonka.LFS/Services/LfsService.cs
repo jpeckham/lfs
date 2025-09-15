@@ -1,10 +1,10 @@
 ﻿using SPTarkov.DI.Annotations;
-using SPTarkov.LFS.Helpers;
-using SPTarkov.LFS.Models;
-using SPTarkov.LFS.Models.LFS;
-using SPTarkov.LFS.StorageAdapters;
+using SPTushonka.LFS.Helpers;
+using SPTushonka.LFS.Models;
+using SPTushonka.LFS.Models.LFS;
+using SPTushonka.LFS.StorageAdapters;
 
-namespace SPTarkov.LFS.Services;
+namespace SPTushonka.LFS.Services;
 
 [Injectable]
 public class LfsService(

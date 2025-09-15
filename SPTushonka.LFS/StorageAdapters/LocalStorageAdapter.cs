@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using SPTarkov.DI.Annotations;
 
-namespace SPTarkov.LFS.StorageAdapters;
+namespace SPTushonka.LFS.StorageAdapters;
 
 [Injectable]
 //Todo: Extend this further with an interface at some point, perhaps allowing S3 buckets and such to be a thing if we need them

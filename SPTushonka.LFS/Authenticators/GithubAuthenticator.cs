@@ -1,15 +1,15 @@
 ﻿using Octokit;
 using SPTarkov.DI.Annotations;
-using SPTarkov.LFS.Extensions;
-using SPTarkov.LFS.Models;
-using SPTarkov.LFS.Models.LFS;
+using SPTushonka.LFS.Extensions;
+using SPTushonka.LFS.Models;
+using SPTushonka.LFS.Models.LFS;
 
-namespace SPTarkov.LFS.Authenticators;
+namespace SPTushonka.LFS.Authenticators;
 
 [Injectable]
 public class GithubAuthenticator(ILogger<GithubAuthenticator> logger) : IAuthenticator
 {
-    private static readonly ProductHeaderValue _headerValue = new("SPTarkov.LFS", Program.AppVersion);
+    private static readonly ProductHeaderValue _headerValue = new("SPTushonka.LFS", Program.AppVersion);
     private static readonly Uri _githubUri = new("https://api.github.com/");
 
     public EAuthentication AuthenticationType

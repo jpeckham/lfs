@@ -1,9 +1,9 @@
 ﻿using SPTarkov.DI.Annotations;
-using SPTarkov.LFS.Authenticators;
-using SPTarkov.LFS.Models;
-using SPTarkov.LFS.Models.LFS;
+using SPTushonka.LFS.Authenticators;
+using SPTushonka.LFS.Models;
+using SPTushonka.LFS.Models.LFS;
 
-namespace SPTarkov.LFS.Services;
+namespace SPTushonka.LFS.Services;
 
 [Injectable]
 public class AuthenticatorService(IEnumerable<IAuthenticator> authenticators)

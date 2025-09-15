@@ -1,9 +1,9 @@
 ﻿using SPTarkov.DI.Annotations;
-using SPTarkov.LFS.Models;
-using SPTarkov.LFS.Models.LFS;
-using SPTarkov.LFS.StorageAdapters;
+using SPTushonka.LFS.Models;
+using SPTushonka.LFS.Models.LFS;
+using SPTushonka.LFS.StorageAdapters;
 
-namespace SPTarkov.LFS.Helpers;
+namespace SPTushonka.LFS.Helpers;
 
 [Injectable]
 public class BatchRequestHelper(LocalStorageAdapter localStorageAdapter)

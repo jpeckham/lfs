@@ -1,4 +1,4 @@
-﻿namespace SPTarkov.LFS.Models;
+﻿namespace SPTushonka.LFS.Models;
 
 public record GithubSettings
 {

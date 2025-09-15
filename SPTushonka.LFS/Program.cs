@@ -4,12 +4,12 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using SPTarkov.DI;
-using SPTarkov.LFS.Extensions;
-using SPTarkov.LFS.Models;
-using SPTarkov.LFS.Models.LFS;
-using SPTarkov.LFS.Services;
+using SPTushonka.LFS.Extensions;
+using SPTushonka.LFS.Models;
+using SPTushonka.LFS.Models.LFS;
+using SPTushonka.LFS.Services;
 
-namespace SPTarkov.LFS;
+namespace SPTushonka.LFS;
 
 public class Program
 {
@@ -47,7 +47,7 @@ public class Program
                 "default",
                 httpContext =>
                 {
-                    var ipAddress = httpContext.GetClientIpAddress();
+                    var ipAddress = httpContext.Connection.RemoteIpAddress;
 
                     return RateLimitPartition.GetFixedWindowLimiter(
                         partitionKey: ipAddress,
@@ -71,7 +71,7 @@ public class Program
                     var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
                     logger.LogWarning(
                         "Rate limit exceeded for IP: {IpAddress} on endpoint: {Path}",
-                        context.HttpContext.GetClientIpAddress(),
+                        context.HttpContext.Connection.RemoteIpAddress,
                         context.HttpContext.Request.Path
                     );
                     return ValueTask.CompletedTask;
@@ -99,7 +99,7 @@ public class Program
                 async (context, next) =>
                 {
                     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-                    var clientIp = context.GetClientIpAddress();
+                    var clientIp = context.Connection.RemoteIpAddress;
                     var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
                     var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
                     var remoteIp = context.Connection.RemoteIpAddress?.ToString();

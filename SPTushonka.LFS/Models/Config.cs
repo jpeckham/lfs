@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace SPTarkov.LFS.Models;
+namespace SPTushonka.LFS.Models;
 
 public record Config
 {

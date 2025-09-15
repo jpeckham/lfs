@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace SPTarkov.LFS.Models.LFS;
+namespace SPTushonka.LFS.Models.LFS;
 
 public record LFSObject
 {

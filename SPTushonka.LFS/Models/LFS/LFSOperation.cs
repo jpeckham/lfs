@@ -1,4 +1,4 @@
-﻿namespace SPTarkov.LFS.Models.LFS;
+﻿namespace SPTushonka.LFS.Models.LFS;
 
 public enum LFSOperation
 {

@@ -2,15 +2,15 @@
     "Endpoints": [
         {
             "RepositoryName": "SPT C# Server",
-            "RepositoryUrl": "https://github.com/sp-tarkov/server-csharp",
-            "Endpoint": "/sp-tarkov/server-csharp",
+            "RepositoryUrl": "https://github.com/sp-tushonka/server-csharp",
+            "Endpoint": "/sp-tushonka/server-csharp",
             "RepositoryVisibility": "Public",
             "Authentication": "Github"
         },
         {
             "RepositoryName": "SPT Node Server",
-            "RepositoryUrl": "https://github.com/sp-tarkov/server",
-            "Endpoint": "/sp-tarkov/server",
+            "RepositoryUrl": "https://github.com/sp-tushonka/server",
+            "Endpoint": "/sp-tushonka/server",
             "RepositoryVisibility": "Public",
             "Authentication": "Github"
         }

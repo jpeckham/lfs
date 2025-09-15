@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace SPTarkov.LFS.Extensions;
+namespace SPTushonka.LFS.Extensions;
 
 public static class HeaderDictionaryExtensions
 {
