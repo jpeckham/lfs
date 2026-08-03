@@ -1,0 +1,13 @@
+# Host build output would otherwise be copied over the container's own and can break the build
+**/bin/
+**/obj/
+**/.vs/
+**/*.user
+
+.git/
+.github/
+data/
+lfs-data/
+nginx/
+Dockerfile
+docker-compose.yml
