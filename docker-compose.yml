@@ -5,6 +5,9 @@ services:
     restart: unless-stopped
     ports:
       - "5420:5420"
+    # Uncomment for verbose per-request logging when diagnosing a reverse proxy setup.
+    # environment:
+    #   - Logging__LogLevel__SPTushonka.LFS=Debug
     volumes:
       - ./config.jsonc:/app/config.jsonc:ro
       - ./lfs-data:/app/data
