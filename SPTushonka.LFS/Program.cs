@@ -152,10 +152,14 @@ public class Program
 
             var mapGroup = app.MapGroup(repositoryConfig.Endpoint);
             RegisterLfsEndpoints(mapGroup, repositoryConfig);
-            logger.LogInformation("Added endpoint: {Endpoint}", repositoryConfig.Endpoint);
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Added endpoint: {Endpoint}", repositoryConfig.Endpoint);
+            }
         }
 
-        app.MapGet("/", () => Results.Content($"<h1>SPT.LFS v{AppVersion}</h1>", "text/html")).RequireRateLimiting("default");
+        app.MapGet("/", () => Results.Content($"<h1>SPTushonka.LFS v{AppVersion}</h1>", "text/html")).RequireRateLimiting("default");
 
         await app.RunAsync();
     }
