@@ -1,11 +1,12 @@
 ﻿using System.Text.Json.Serialization;
+using SPTushonka.LFS.Converters;
 
 namespace SPTushonka.LFS.Models.LFS;
 
 public record LFSBatchRequest
 {
     [JsonPropertyName("operation")]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(LFSOperationConverter))]
     public LFSOperation Operation { get; set; }
 
     [JsonPropertyName("transfers")]
