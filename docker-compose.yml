@@ -1,6 +1,6 @@
 services:
   sptlfs:
-    image: ghcr.io/sp-tushonka/lfs:master
+    image: ${LFS_IMAGE:-ghcr.io/sp-tushonka/lfs:master}
     container_name: sptlfs
     restart: unless-stopped
     ports:
