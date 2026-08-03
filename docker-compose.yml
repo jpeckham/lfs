@@ -4,7 +4,7 @@ services:
     container_name: sptlfs
     restart: unless-stopped
     ports:
-      - "5420:5420"
+      - "127.0.0.1:5420:5420"
     # Uncomment for verbose per-request logging when diagnosing a reverse proxy setup.
     # environment:
     #   - Logging__LogLevel__SPTushonka.LFS=Debug
