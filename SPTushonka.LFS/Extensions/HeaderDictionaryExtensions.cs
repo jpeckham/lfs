@@ -1,44 +1,49 @@
-﻿using System.Text;
+using System.Text;
 
 namespace SPTushonka.LFS.Extensions;
+
+public readonly record struct BasicCredentials(string Username, string Password);
 
 public static class HeaderDictionaryExtensions
 {
     public const string AuthorizationHeader = "Authorization";
     public const string BasicPrefix = "Basic";
 
-    public static (string Username, string Password) GetCredentials(this IHeaderDictionary headers)
+    public static bool TryGetCredentials(this IHeaderDictionary headers, out BasicCredentials credentials)
     {
-        if (!headers.TryGetValue(AuthorizationHeader, out var authValues))
+        credentials = default;
+
+        if (!headers.TryGetValue(AuthorizationHeader, out var authValues) || authValues.Count != 1)
         {
-            throw new InvalidOperationException("No Authorization header found.");
+            return false;
         }
 
-        if (authValues.Count != 1)
+        var auth = authValues[0].AsSpan().Trim();
+
+        // The scheme must be followed by a separator, otherwise "Basicxyz" would be accepted.
+        if (auth.Length <= BasicPrefix.Length || !auth.StartsWith(BasicPrefix, StringComparison.OrdinalIgnoreCase) || auth[BasicPrefix.Length] != ' ')
         {
-            throw new InvalidOperationException("More than one Authorization header found.");
+            return false;
         }
 
-        var auth = authValues[0].AsSpan();
+        var encoded = auth[BasicPrefix.Length..].Trim();
+        var decoded = new byte[encoded.Length / 4 * 3];
 
-        if (!auth.StartsWith(BasicPrefix.AsSpan(), StringComparison.Ordinal))
+        if (!Convert.TryFromBase64Chars(encoded, decoded, out var decodedLength))
         {
-            throw new InvalidOperationException("Authorization header is not Basic.");
+            return false;
         }
 
-        var encodedCredentials = auth.Slice(BasicPrefix.Length).Trim();
-
-        var decoded = Convert.FromBase64String(encodedCredentials.ToString());
-
-        var decodedString = Encoding.UTF8.GetString(decoded);
-
+        var decodedString = Encoding.UTF8.GetString(decoded.AsSpan(0, decodedLength));
         var colonIndex = decodedString.IndexOf(':');
 
         if (colonIndex == -1)
         {
-            throw new InvalidOperationException("Invalid Basic authentication format.");
+            return false;
         }
 
-        return (decodedString[..colonIndex], decodedString[(colonIndex + 1)..]);
+        credentials = new BasicCredentials(decodedString[..colonIndex], decodedString[(colonIndex + 1)..]);
+
+        return true;
     }
 }
