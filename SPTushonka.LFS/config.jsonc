@@ -15,7 +15,27 @@
             "Authentication": "Github"
         }
     ],
+    // Logging verbosity is not configured here. Use the standard Logging:LogLevel section in
+    // appsettings.json, or the Logging__LogLevel__SPTushonka.LFS environment variable.
     "Options": {
-        "AdditionalLogging": true
+        // Addresses or CIDR ranges of reverse proxies allowed to set X-Forwarded-For.
+        // Leave empty only when nothing untrusted can reach the application directly:
+        // an empty list means any client can spoof its address and get a fresh rate limit bucket.
+        "TrustedProxies": [],
+
+        // Largest object accepted by the upload endpoint. 0 means unlimited.
+        "MaxUploadSizeBytes": 0,
+
+        // How long a GitHub permission lookup is reused. 0 disables caching, which costs
+        // one GitHub API call per object per request.
+        "GithubAuthCacheSeconds": 300,
+
+        "RateLimit": {
+            "PermitLimit": 10000,
+            "WindowHours": 24,
+            // Requests to hold once the limit is hit. Above 0 they wait out the rest of
+            // the window instead of getting a 429 back.
+            "QueueLimit": 0
+        }
     }
 }

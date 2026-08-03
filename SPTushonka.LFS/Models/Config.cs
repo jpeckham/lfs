@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace SPTushonka.LFS.Models;
 
@@ -36,7 +36,38 @@ public record EndpointConfig
 
 public record LFSApplicationOptions
 {
-    public bool AdditionalLogging { get; set; }
+    /// <summary>
+    /// Addresses or CIDR ranges of reverse proxies allowed to set X-Forwarded-For.
+    /// Leaving this empty trusts forwarded headers from any source, which lets clients
+    /// spoof their address and bypass rate limiting.
+    /// </summary>
+    public string[] TrustedProxies { get; set; } = [];
+
+    /// <summary>
+    /// Largest object accepted by the upload endpoint. Zero or negative means unlimited.
+    /// </summary>
+    public long MaxUploadSizeBytes { get; set; }
+
+    /// <summary>
+    /// How long a GitHub permission lookup is reused before re-querying the API.
+    /// Zero disables caching, at the cost of an API call per object per request.
+    /// </summary>
+    public int GithubAuthCacheSeconds { get; set; } = 300;
+
+    public RateLimitOptions RateLimit { get; set; } = new();
+}
+
+public record RateLimitOptions
+{
+    public int PermitLimit { get; set; } = 10000;
+
+    public int WindowHours { get; set; } = 24;
+
+    /// <summary>
+    /// Requests held once the window is exhausted. Anything above zero makes callers wait
+    /// out the remainder of the window instead of receiving a 429.
+    /// </summary>
+    public int QueueLimit { get; set; }
 }
 
 public enum EAuthentication
