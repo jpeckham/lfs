@@ -1,9 +1,9 @@
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /app
 
 # Copy solution and project files
-COPY SPTushonka.LFS.sln ./
+COPY SPTushonka.LFS.slnx ./
 COPY SPTushonka.LFS/SPTushonka.LFS.csproj SPTushonka.LFS/
 
 # Restore dependencies
@@ -16,7 +16,7 @@ COPY . .
 RUN dotnet publish SPTushonka.LFS/SPTushonka.LFS.csproj -c Release -o /app/publish --no-restore
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # Copy published app
